@@ -33,6 +33,10 @@ console.log('please pay to:', address)
 
 Compute an m-of-n multisig script. `keys` should be an array of `buffer`s, `n` should be < 16.
 
-#### `scripter.computeNestedAddress(script)`
+#### `scriptet.addressFromScript(script, [testnet = false])`
 
-Compute the nested P2SH-P2WSH address for the given script. Script should be passed as a `buffer`.
+Compute a P2SH address from a script hash. Defaults to mainnet address.
+
+#### `scripter.computeNestedAddress(script, [testnet = false])`
+
+Compute the nested P2SH-P2WSH address for the given script. Script should be passed as a `buffer`. Defaults to mainnet address.

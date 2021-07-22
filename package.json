@@ -1,6 +1,6 @@
 {
   "name": "btc-script-helpers",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Helpers for composing bitcoin scripts",
   "main": "index.js",
   "scripts": {

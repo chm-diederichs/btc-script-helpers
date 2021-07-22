@@ -83,6 +83,10 @@ function addressFromScript (script, testnet = false) {
   return base58.encode(address)
 }
 
+function scriptToBytecode (script) {
+  return Script.from(script)
+}
+
 function getScriptHash (script) {
   return sha256(script).reverse()
 }

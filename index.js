@@ -7,6 +7,7 @@ module.exports = {
   fromMultisig,
   computeNestedAddress,
   addressFromScript,
+  scriptToBytecode,
   getScriptHash
 }
 

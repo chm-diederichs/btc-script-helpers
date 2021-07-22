@@ -6,7 +6,8 @@ const Script = require('btc-script-builder')
 module.exports = {
   fromMultisig,
   computeNestedAddress,
-  addressFromScript
+  addressFromScript,
+  getScriptHash
 }
 
 function fromMultisig (m , n, keys) {
@@ -80,6 +81,10 @@ function addressFromScript (script, testnet = false) {
   // base58 encode result
   const address = Buffer.concat([extendedDigest, checksum])
   return base58.encode(address)
+}
+
+function getScriptHash (script) {
+  return sha256(script).reverse()
 }
 
 function sha256 (data) {

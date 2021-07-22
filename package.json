@@ -1,5 +1,5 @@
 {
-  "name": "btc-script-utils",
+  "name": "btc-script-helpers",
   "version": "1.0.2",
   "description": "Helpers for composing bitcoin scripts",
   "main": "index.js",
@@ -12,5 +12,13 @@
     "bs58": "^4.0.1",
     "btc-script-builder": "^1.0.0",
     "nanoassert": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chm-diederichs/btc-script-helpers.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/chm-diederichs/btc-script-helpers/issues"
   }
 }

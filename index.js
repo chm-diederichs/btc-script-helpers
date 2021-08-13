@@ -1,38 +1,48 @@
 const crypto = require('crypto')
 const assert = require('nanoassert')
 const base58 = require('bs58')
+const bech32 = require('bech32')
 const Script = require('btc-script-builder')
+const NETWORKS = require('./networks')
+
+const BECH32_PREFIXES = NETWORKS.reduce(getSegwitPrefixes, [])
 
 module.exports = {
   fromMultisig,
-  computeNestedAddress,
-  addressFromScript,
+  payToAddress,
+  p2pkh,
+  p2wpkh,
+  p2wsh,
+  p2pkhAddress,
+  p2shAddress,
+  p2wpkhNestedAddress,
+  p2wshNestedAddress,
   scriptToBytecode,
   getScriptHash
 }
 
-function fromMultisig (m , n, keys) {
+// compute the redeem script for m-o-n multisig
+function fromMultisig (m, n, keys) {
   assert(keys.length === n, `${n} keys required for multisig.`)
   assert(m > 0 && m <= n)
   assert(n > 0 && n < 16)
   assert(Array.isArray(keys))
-  
-  for (let key of keys) {
+
+  for (const key of keys) {
     assert(Buffer.isBuffer(key))
   }
 
   const orderedKeys = []
-  let len = 0
 
   const sortKeys = keys.sort(Buffer.compare)
-  for (let key of sortKeys) {
+  for (const key of sortKeys) {
     orderedKeys.push(key)
   }
 
   const script = new Script()
 
   script.addOp(m)
-  for (let key of orderedKeys) {
+  for (const key of orderedKeys) {
     script.addData(key)
   }
   script.addOp(n)
@@ -42,14 +52,86 @@ function fromMultisig (m , n, keys) {
   return script.compile()
 }
 
-function computeNestedAddress (script, tesntet = false) {
-  assert(script instanceof Uint8Array, 'script should be encoded to bytes')
-  const scriptHash = sha256(script)
-  const p2sh = fromProgram(0, scriptHash)
-
-  return addressFromScript(p2sh, tesntet)
+// given an address, return the scriptPubKey
+function payToAddress (addr) {
+  return isBech32(addr) ? p2wpkh(addr) : p2pkh(addr)
 }
 
+// given a script, return the p2sh address
+function p2shAddress (script, network = NETWORKS.bitcoin) {
+  assert(Buffer.isBuffer(script), 'script hash must be passed as raw bytes')
+
+  // compute ripemd160 hsah of sha256(script)
+  const digest = hash160(script)
+
+  // include network flag
+  const extendedDigest = Buffer.alloc(21)
+  extendedDigest[0] = network.scriptHash
+  extendedDigest.set(digest, 1)
+
+  // first 4 bytes of SHAd result taken as checksum
+  const checksum = sha256(sha256(extendedDigest)).slice(0, 4)
+
+  // base58 encode result
+  const address = Buffer.concat([extendedDigest, checksum])
+  return base58.encode(address)
+}
+
+// given a pubKey, return the p2pkh address
+function p2pkhAddress (pubKey, network = NETWORKS.bitcoin) {
+  const pubKeyHash = hash160(pubKey)
+
+  const extendedDigest = Buffer.allocUnsafe(21)
+  extendedDigest.writeUint8(network.pubKeyHash)
+  extendedDigest.set(pubKeyHash)
+
+  // first 4 bytes of SHAd result taken as checksum
+  const checksum = sha256(sha256(extendedDigest)).slice(0, 4)
+
+  // base58 encode result
+  const address = Buffer.concat([extendedDigest, checksum])
+  return base58.encode(address)
+}
+
+// given a p2pkh address, return the scriptPubKey
+function p2pkh (addr) {
+  assert(!isBech32(addr), 'Bech32 addresses should use p2sh-p2wpkh script')
+
+  const script = new Script()
+
+  script.addOp(0x76)
+  script.addOp(0xa9)
+  script.addData(pkhFromLegacyAddress(addr))
+  script.addOp(0x88)
+  script.addOp(0xac)
+
+  return script.compile()
+}
+
+// given a p2wpkh address, return the scriptPubKey
+function p2wpkh (addr) {
+  assert(isBech32(addr), 'Legacy addresses cannot be used for p2wpkh scripts')
+  return fromProgram(0, pkhFromBech32Address(addr))
+}
+
+// given a p2wsh address, return the scriptPubKey
+function p2wsh (script) {
+  assert(script instanceof Uint8Array, 'script should be encoded to bytes')
+  const scriptHash = sha256(script)
+  return fromProgram(0, scriptHash)
+}
+
+// given a p2wpkh address, return the p2sh-p2wpkh nested address
+function p2wpkhNestedAddress (address, network) {
+  return p2shAddress(p2wpkh(address), network)
+}
+
+// given a p2wsh address, return the p2sh-p2wsh nested address
+function p2wshNestedAddress (script, network) {
+  return p2shAddress(p2wsh(script), network)
+}
+
+// given a program, return the segwit scriptPubKey
 function fromProgram (version, data) {
   assert((version & 0xff) === version && version >= 0 && version <= 16)
   assert(Buffer.isBuffer(data) && data.length >= 2 && data.length <= 40)
@@ -65,23 +147,26 @@ function fromProgram (version, data) {
   return script.compile()
 }
 
-function addressFromScript (script, testnet = false) {
-  assert(Buffer.isBuffer(script), 'script hash must be passed as raw bytes')
+function isBech32 (address) {
+  const prefix = address.split(1)[0]
+  return BECH32_PREFIXES.includes(prefix)
+}
 
-  // compute ripemd160 hsah of sha256(script)
-  const digest = hash160(script)
-  
-  // include a network flag for mainnet/testnet
-  let extendedDigest = Buffer.alloc(21)
-  extendedDigest[0] = testnet ? 0xc4 : 0x05
-  extendedDigest.set(digest, 1)
+// extract pubKey hash from legacy address
+function pkhFromLegacyAddress (addr) {
+  return base58.decode(addr).data
+}
 
-  // first 4 bytes of SHAd result taken as checksum
-  const checksum = sha256(sha256(extendedDigest)).slice(0, 4)
+// extract pubKey hash from bech32 address
+function pkhFromBech32Address (addr) {
+  const { words } = bech32.decode(addr)
+  return bech32.fromWords(words.slice(1))
+}
 
-  // base58 encode result
-  const address = Buffer.concat([extendedDigest, checksum])
-  return base58.encode(address)
+function getSegwitPrefixes (acc, network) {
+  if (network.bech32) acc.push(network.bech32)
+  if (network.blech32) acc.push(network.blech32)
+  return acc
 }
 
 function scriptToBytecode (script) {

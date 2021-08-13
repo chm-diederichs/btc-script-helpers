@@ -24,7 +24,7 @@ const script = scripter.fromMultisig(2, 3, keys)
 const address = scripter.computeNestedAddress(script)
 
 console.log('please pay to:', address)
-// please pay to: 3KruSwZhXtDaHJpcqr5cMiuMbWCWQVS343 
+// please pay to: 3KruSwZhXtDaHJpcqr5cMiuMbWCWQVS343
 ```
 
 ## API
@@ -33,10 +33,42 @@ console.log('please pay to:', address)
 
 Compute an m-of-n multisig script. `keys` should be an array of `buffer`s, `n` should be < 16.
 
-#### `scriptet.addressFromScript(script, [testnet = false])`
+#### `scriptet.p2shAddress(script, [network = bitcoin])`
 
 Compute a P2SH address from a script hash. Defaults to mainnet address.
 
-#### `scripter.computeNestedAddress(script, [testnet = false])`
+#### `scriptet.p2pkhAddress(pubKey, [network = bitcoin])`
+
+Compute a P2PKH address from a pubKey. Defaults to mainnet address.
+
+#### `scripter.p2wshNestedAddress(script, [network = bitcoin])`
 
 Compute the nested P2SH-P2WSH address for the given script. Script should be passed as a `buffer`. Defaults to mainnet address.
+
+#### `scripter.p2wpkhNestedAddress(address, [network = bitcoin])`
+
+Compute the nested P2SH-P2WPKH address for the given segwit address. Defaults to mainnet address.
+
+#### `scripter.p2wpkh(address)`
+
+Compute the scriptPubKey corresponding to a P2WPKH address.
+
+#### `scripter.p2wsh(address)`
+
+Compute the scriptPubKey corresponding to a P2WSH address.
+
+#### `scripter.p2pkh(address)`
+
+Compute the scriptPubKey corresponding to a P2PKH address.
+
+#### `scripter.p2pkh(address)`
+
+Compute the scriptPubKey corresponding to a P2PKH address.
+
+#### `scripter.scriptToBytecode(script)`
+
+Compute the bytecode for a given asm script.
+
+#### `scripter.getScriptHash(script)`
+
+Compute the Bitcoin internal scripthash format for a given script.

@@ -9,6 +9,7 @@
   "author": "Christophe Diederichs",
   "license": "ISC",
   "dependencies": {
+    "bech32": "^2.0.0",
     "bs58": "^4.0.1",
     "btc-script-builder": "^1.0.0",
     "nanoassert": "^2.0.0"

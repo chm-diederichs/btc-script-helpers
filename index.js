@@ -1,11 +1,12 @@
 const crypto = require('crypto')
 const assert = require('nanoassert')
 const base58 = require('bs58')
-const bech32 = require('bech32')
+const { bech32 } = require('bech32')
+const bint = require('bint8array')
 const Script = require('btc-script-builder')
 const NETWORKS = require('./networks')
 
-const BECH32_PREFIXES = NETWORKS.reduce(getSegwitPrefixes, [])
+const BECH32_PREFIXES = Object.values(NETWORKS).reduce(getSegwitPrefixes, [])
 
 module.exports = {
   fromMultisig,
@@ -53,8 +54,8 @@ function fromMultisig (m, n, keys) {
 }
 
 // given an address, return the scriptPubKey
-function payToAddress (addr) {
-  return isBech32(addr) ? p2wpkh(addr) : p2pkh(addr)
+function payToAddress (addr, network) {
+  return isBech32(addr, network) ? p2wpkh(addr) : p2pkh(addr)
 }
 
 // given a script, return the p2sh address
@@ -134,7 +135,7 @@ function p2wshNestedAddress (script, network) {
 // given a program, return the segwit scriptPubKey
 function fromProgram (version, data) {
   assert((version & 0xff) === version && version >= 0 && version <= 16)
-  assert(Buffer.isBuffer(data) && data.length >= 2 && data.length <= 40)
+  assert(data instanceof Uint8Array && data.length >= 2 && data.length <= 40)
 
   const versionOp = version === 0 ? 0 : version + 0x50
 
@@ -147,26 +148,44 @@ function fromProgram (version, data) {
   return script.compile()
 }
 
-function isBech32 (address) {
+function isBech32 (address, network) {
   const prefix = address.split(1)[0]
-  return BECH32_PREFIXES.includes(prefix)
+  const checkFor = network
+    ? [network].reduce(getSegwitPrefixes, [])
+    : BECH32_PREFIXES
+
+  return checkFor.includes(prefix)
 }
 
 // extract pubKey hash from legacy address
 function pkhFromLegacyAddress (addr) {
-  return base58.decode(addr).data
+  return base58decode(addr).data
 }
 
 // extract pubKey hash from bech32 address
 function pkhFromBech32Address (addr) {
   const { words } = bech32.decode(addr)
-  return bech32.fromWords(words.slice(1))
+  return new Uint8Array(bech32.fromWords(words.slice(1)))
 }
 
 function getSegwitPrefixes (acc, network) {
   if (network.bech32) acc.push(network.bech32)
   if (network.blech32) acc.push(network.blech32)
   return acc
+}
+
+function base58decode (addr) {
+  const bytes = base58.decode(addr)
+
+  const split = bytes.byteLength - 4
+  const checksum = bytes.slice(split)
+  const hash = sha256(sha256(bytes.subarray(0, split)))
+  assert(bint.compare(hash.subarray(0, 4), checksum) === 0)
+
+  return {
+    prefix: bytes[0],
+    data: bytes.subarray(1, split)
+  }
 }
 
 function scriptToBytecode (script) {

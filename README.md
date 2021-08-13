@@ -49,6 +49,10 @@ Compute the nested P2SH-P2WSH address for the given script. Script should be pas
 
 Compute the nested P2SH-P2WPKH address for the given segwit address. Defaults to mainnet address.
 
+#### `scripter.payToAddress(address, [network])`
+
+Compute the scriptPubKey corresponding to P2PKH|P2WPKH address. `network` may be passed to check for bech32 prefixes.
+
 #### `scripter.p2wpkh(address)`
 
 Compute the scriptPubKey corresponding to a P2WPKH address.

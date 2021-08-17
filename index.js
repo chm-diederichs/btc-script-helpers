@@ -100,11 +100,11 @@ function p2pkh (addr) {
 
   const script = new Script()
 
-  script.addOp(0x76)
-  script.addOp(0xa9)
+  script.addOp('DUP')
+  script.addOp('HASH160')
   script.addData(pkhFromLegacyAddress(addr))
-  script.addOp(0x88)
-  script.addOp(0xac)
+  script.addOp('EQUALVERIFY')
+  script.addOp('CHECKSIG')
 
   return script.compile()
 }

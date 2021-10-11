@@ -15,7 +15,10 @@ module.exports = {
   p2wpkh,
   p2wsh,
   p2pkhAddress,
+  p2wpkhAddress,
+  p2wpkhScript,
   p2shAddress,
+  p2wshAddress,
   p2wpkhNestedAddress,
   p2wshNestedAddress,
   scriptToBytecode,
@@ -82,9 +85,9 @@ function p2shAddress (script, network = NETWORKS.bitcoin) {
 function p2pkhAddress (pubKey, network = NETWORKS.bitcoin) {
   const pubKeyHash = hash160(pubKey)
 
-  const extendedDigest = Buffer.allocUnsafe(21)
+  const extendedDigest = Buffer.alloc(21)
   extendedDigest.writeUint8(network.pubKeyHash)
-  extendedDigest.set(pubKeyHash)
+  extendedDigest.set(pubKeyHash, 1)
 
   // first 4 bytes of SHAd result taken as checksum
   const checksum = sha256(sha256(extendedDigest)).slice(0, 4)
@@ -92,6 +95,18 @@ function p2pkhAddress (pubKey, network = NETWORKS.bitcoin) {
   // base58 encode result
   const address = Buffer.concat([extendedDigest, checksum])
   return base58.encode(address)
+}
+
+// given a p2wpkh address, return the p2sh-p2wpkh nested address
+function p2wpkhAddress (pubKey, prefix) {
+  const words = bech32.toWords(hash160(pubKey))
+  return bech32.encode(prefix, [0, ...words])
+}
+
+// given a p2wpkh address, return the p2sh-p2wpkh nested address
+function p2wshAddress (script, prefix) {
+  const words = bech32.toWords(sha256(script))
+  return bech32.encode(prefix, [0, ...words])
 }
 
 // given a p2pkh address, return the scriptPubKey
@@ -107,6 +122,16 @@ function p2pkh (addr) {
   script.addOp('CHECKSIG')
 
   return script.compile()
+}
+
+// given a p2wpkh address, return the scriptPubKey
+function p2wpkhScript (addr) {
+  assert(isBech32(addr), 'Legacy addresses cannot be used for p2wpkh scripts')
+  return Buffer.concat([
+    Buffer.from([0x76, 0xa9, 0x14]),
+    pkhFromBech32Address(addr),
+    Buffer.from([0x88, 0xac])
+  ])
 }
 
 // given a p2wpkh address, return the scriptPubKey
